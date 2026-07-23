@@ -44,7 +44,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     url = match.group(0)
-    status_msg = await update.message.reply_text("Downloading and converting... this may take a moment.")
+    status_msg = await update.message.reply_text("Link found! Fetching video info...")
 
     with tempfile.TemporaryDirectory() as tmp_dir:
         outtmpl = os.path.join(tmp_dir, "%(title).100s.%(ext)s")
@@ -68,6 +68,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if COOKIES_FILE:
             ydl_opts["cookiefile"] = COOKIES_FILE
 
+        await status_msg.edit_text("⬇Downloading and converting to MP3... this may take a moment.")
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
@@ -76,6 +77,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logger.exception("Download failed")
             await status_msg.edit_text(f"Sorry, couldn't process that link: {e}")
             return
+
+        await status_msg.edit_text(f"Downloaded \"{title}\"! Preparing file...")
 
         mp3_path = None
         for f in os.listdir(tmp_dir):
@@ -95,10 +98,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        await status_msg.edit_text("Uploading...")
+        await status_msg.edit_text(f"Uploading \"{title}\" ({size_mb:.1f} MB)...")
         with open(mp3_path, "rb") as audio_file:
             await update.message.reply_audio(audio=audio_file, title=title)
-        await status_msg.delete()
+        await status_msg.edit_text(f"Done! Enjoy \"{title}\".")
 
 
 class HealthHandler(BaseHTTPRequestHandler):
