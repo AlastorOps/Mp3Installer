@@ -68,7 +68,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if COOKIES_FILE:
             ydl_opts["cookiefile"] = COOKIES_FILE
 
-        await status_msg.edit_text("⬇Downloading and converting to MP3... this may take a moment.")
+        await status_msg.edit_text("Downloading and converting to MP3... this may take a moment.")
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=True)
