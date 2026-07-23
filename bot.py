@@ -1,6 +1,7 @@
 import os
 import re
 import logging
+import shutil
 import tempfile
 import threading
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -15,6 +16,12 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+
+COOKIES_FILE = None
+_cookies_source = os.environ.get("YT_COOKIES_FILE")
+if _cookies_source:
+    COOKIES_FILE = os.path.join(tempfile.gettempdir(), "yt_cookies.txt")
+    shutil.copyfile(_cookies_source, COOKIES_FILE)
 
 YOUTUBE_REGEX = re.compile(
     r"(https?://)?(www\.)?(youtube\.com/watch\?v=|youtu\.be/|youtube\.com/shorts/)[\w-]+"
@@ -57,9 +64,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if ffmpeg_location:
             ydl_opts["ffmpeg_location"] = ffmpeg_location
 
-        cookies_file = os.environ.get("YT_COOKIES_FILE")
-        if cookies_file:
-            ydl_opts["cookiefile"] = cookies_file
+        if COOKIES_FILE:
+            ydl_opts["cookiefile"] = COOKIES_FILE
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
