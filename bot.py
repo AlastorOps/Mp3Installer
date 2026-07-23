@@ -57,7 +57,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "preferredquality": "192",
             }],
             "noplaylist": True,
-            "quiet": True,
+            "quiet": not os.environ.get("YTDLP_DEBUG"),
+            "verbose": bool(os.environ.get("YTDLP_DEBUG")),
         }
         ffmpeg_location = os.environ.get("FFMPEG_LOCATION")
         if ffmpeg_location:
