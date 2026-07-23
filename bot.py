@@ -3,8 +3,6 @@ import re
 import logging
 import shutil
 import tempfile
-import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from dotenv import load_dotenv
 from telegram import Update
@@ -16,6 +14,12 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+WEBHOOK_URL = os.environ.get("WEBHOOK_URL") or os.environ.get("RENDER_EXTERNAL_URL")
+PORT = int(os.environ.get("PORT", 8080))
+
+# Set to False after the first message is handled, so we can warn the user
+# once that Render's free tier may have just cold-started the container.
+just_booted = True
 
 COOKIES_FILE = None
 _cookies_source = os.environ.get("YT_COOKIES_FILE")
@@ -32,11 +36,20 @@ MAX_FILE_SIZE_MB = 50  # Telegram Bot API upload limit for bots
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
-        "Send me a YouTube link and I'll send back the audio as an MP3."
+        "Send me a YouTube link and I'll send back the audio as an MP3.\n\n"
+        "If I don't respond right away, I may be waking up from sleep — "
+        "just wait 20-30 seconds and I'll catch up."
     )
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    global just_booted
+    if just_booted:
+        await update.message.reply_text(
+            " I was asleep to save resources — I'm back online! Working on your request now..."
+        )
+        just_booted = False
+
     text = update.message.text or ""
     match = YOUTUBE_REGEX.search(text)
     if not match:
@@ -104,33 +117,30 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await status_msg.edit_text(f"Done! Enjoy \"{title}\".")
 
 
-class HealthHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        self.send_response(200)
-        self.end_headers()
-        self.wfile.write(b"OK")
-
-    def log_message(self, format, *args):
-        pass
-
-
-def start_health_server():
-    port = int(os.environ.get("PORT", 8080))
-    HTTPServer(("0.0.0.0", port), HealthHandler).serve_forever()
-
-
 def main():
     if not BOT_TOKEN:
         raise RuntimeError("Set the TELEGRAM_BOT_TOKEN environment variable first.")
-
-    threading.Thread(target=start_health_server, daemon=True).start()
+    if not WEBHOOK_URL:
+        raise RuntimeError(
+            "Set the WEBHOOK_URL environment variable (or rely on Render's "
+            "auto-populated RENDER_EXTERNAL_URL) to your service's public URL."
+        )
 
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    logger.info("Bot started, polling...")
-    app.run_polling()
+    # Use the bot token as the URL path so only requests that know it are accepted.
+    url_path = BOT_TOKEN
+    full_webhook_url = f"{WEBHOOK_URL.rstrip('/')}/{url_path}"
+
+    logger.info("Bot started, listening for webhook updates on port %s...", PORT)
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        url_path=url_path,
+        webhook_url=full_webhook_url,
+    )
 
 
 if __name__ == "__main__":
