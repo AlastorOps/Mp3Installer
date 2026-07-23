@@ -51,10 +51,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             }],
             "noplaylist": True,
             "quiet": True,
+            "extractor_args": {"youtube": {"player_client": ["android", "web"]}},
         }
         ffmpeg_location = os.environ.get("FFMPEG_LOCATION")
         if ffmpeg_location:
             ydl_opts["ffmpeg_location"] = ffmpeg_location
+
+        cookies_file = os.environ.get("YT_COOKIES_FILE")
+        if cookies_file:
+            ydl_opts["cookiefile"] = cookies_file
 
         try:
             with yt_dlp.YoutubeDL(ydl_opts) as ydl:
