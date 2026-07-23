@@ -58,7 +58,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             }],
             "noplaylist": True,
             "quiet": True,
-            "extractor_args": {"youtube": {"player_client": ["android", "web"]}},
         }
         ffmpeg_location = os.environ.get("FFMPEG_LOCATION")
         if ffmpeg_location:
