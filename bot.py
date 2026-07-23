@@ -113,8 +113,18 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         await status_msg.edit_text(f"Uploading \"{title}\" ({size_mb:.1f} MB)...")
         with open(mp3_path, "rb") as audio_file:
-            await update.message.reply_audio(audio=audio_file, title=title)
+            await update.message.reply_audio(
+                audio=audio_file,
+                title=title,
+                read_timeout=120,
+                write_timeout=120,
+                connect_timeout=30,
+            )
         await status_msg.edit_text(f"Done! Enjoy \"{title}\".")
+
+
+async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE):
+    logger.error("Unhandled exception while processing update %s", update, exc_info=context.error)
 
 
 def main():
@@ -126,9 +136,17 @@ def main():
             "auto-populated RENDER_EXTERNAL_URL) to your service's public URL."
         )
 
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    app = (
+        ApplicationBuilder()
+        .token(BOT_TOKEN)
+        .read_timeout(60)
+        .write_timeout(60)
+        .connect_timeout(30)
+        .build()
+    )
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    app.add_error_handler(error_handler)
 
     # Use the bot token as the URL path so only requests that know it are accepted.
     url_path = BOT_TOKEN
