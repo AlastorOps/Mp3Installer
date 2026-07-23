@@ -59,6 +59,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "noplaylist": True,
             "quiet": not os.environ.get("YTDLP_DEBUG"),
             "verbose": bool(os.environ.get("YTDLP_DEBUG")),
+            "remote_components": ["ejs:github"],
         }
         ffmpeg_location = os.environ.get("FFMPEG_LOCATION")
         if ffmpeg_location:
