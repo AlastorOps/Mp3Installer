@@ -9,6 +9,6 @@ RUN curl -fsSL https://deno.land/install.sh | sh -s -- -y \
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-COPY bot.py .
+COPY mp3downloader.py .
 
-CMD ["python", "bot.py"]
+CMD ["python", "mp3downloader.py"]
